@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>کاوشگر تعاملی نظریه میدان خط لغزش</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Warm Neutrals with Terracotta Accent -->
+    <!-- Application Structure Plan: A thematic, single-page application with a sticky navigation header. The structure is designed for progressive learning: starting with fundamental concepts, moving to the core equations (Hencky), exploring boundary conditions with interactive sliders, and finally applying the knowledge in a "Case Studies" section that transforms the solved problems into interactive calculators and visualizations. This non-linear, thematic structure is chosen for better usability and understanding compared to a simple linear presentation of the source material. -->
+    <!-- Visualization & Content Choices: 
+        - Goal: Explain core concepts -> Viz: Interactive Mohr's Circle (Canvas) to show the relationship between p, k, and principal stresses.
+        - Goal: Demonstrate Hencky's equations -> Viz: A simple animated diagram showing how pressure 'p' changes with slip-line angle 'phi' (HTML/JS).
+        - Goal: Explore boundary conditions -> Viz: Interactive module with tabs. For Coulomb friction, a slider manipulates the friction coefficient 'μ' to dynamically update the slip-line angle 'θ', making the abstract formula tangible.
+        - Goal: Apply knowledge (solved problems) -> Viz: Interactive calculators for indentation, extrusion, etc. (HTML Forms/JS) and a responsive line chart (Chart.js) for pressure vs. geometry ratio.
+        - Justification: This blend of visualizations and interactive tools is chosen to actively engage the user, transforming reading into active learning that clarifies complex mechanical engineering principles.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            scroll-behavior: smooth;
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 40vh;
+            max-height: 350px;
+            width: 100%;
+            max-width: 600px;
+        }
+        .section-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        .nav-link {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s, color 0.3s;
+            color: #4b5563;
+        }
+        .nav-link.active, .nav-link:hover {
+            background-color: #f97316;
+            color: white;
+        }
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+        h2 {
+            font-size: 1.875rem;
+            font-weight: 600;
+            color: #1f2937;
+            border-bottom: 2px solid #f97316;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #374151;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .interactive-area {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .formula {
+            font-family: 'Times New Roman', serif;
+            font-size: 1.1rem;
+            color: #1e40af;
+            background-color: #eff6ff;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            margin: 1rem 0;
+            direction: ltr;
+        }
+        .icon {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-gray-800">
+
+    <header class="text-center py-8 bg-white shadow-md">
+        <h1 class="text-4xl font-bold text-gray-900">کاوشگر تعاملی نظریه میدان خط لغزش</h1>
+        <p class="text-lg text-gray-600 mt-2">ابزاری برای درک بهتر مفاهیم تغییر شکل پلاستیک در فلزات</p>
+    </header>
+
+    <nav class="sticky-nav shadow-sm mb-8 py-3">
+        <div class="container mx-auto max-w-5xl flex justify-center items-center space-x-4 space-x-reverse">
+            <a href="#concepts" class="nav-link">مفاهیم پایه</a>
+            <a href="#hencky" class="nav-link">معادلات هنکی</a>
+            <a href="#boundaries" class="nav-link">شرایط مرزی</a>
+            <a href="#applications" class="nav-link">کاربردها و مسائل</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto max-w-5xl px-4">
+        
+        <section id="concepts" class="section-card">
+            <h2>
+                <span class="icon">⚙️</span>
+                مفاهیم پایه
+            </h2>
+            <p class="text-lg leading-relaxed">نظریه میدان خط لغزش یک ابزار تحلیلی قدرتمند برای بررسی فرآیندهای تغییر شکل پلاستیک در شرایط کرنش-صفحه است. این نظریه به ما کمک می‌کند تا نیروهای لازم برای شکل‌دهی فلزات، الگوی جریان ماده و تأثیر عواملی مانند اصطکاک را درک کنیم. اساس این نظریه بر این است که جریان پلاستیک یک فرآیند برشی است و در جهت‌هایی رخ می‌دهد که تنش برشی به حداکثر مقدار خود می‌رسد. در این بخش، با مفاهیم کلیدی این نظریه آشنا می‌شویم.</p>
+            
+            <div class="interactive-area">
+                <h3>دایره مور تعاملی برای کرنش-صفحه</h3>
+                <p class="mb-4">دایره مور وضعیت تنش در یک نقطه را نشان می‌دهد. در حالت کرنش-صفحه پلاستیک، شعاع دایره برابر با تنش تسلیم برشی ($k$) است. فشار هیدرواستاتیک ($p$) مرکز دایره را روی محور افقی جابجا می‌کند. با حرکت دادن اسلایدر زیر، ببینید چگونه تغییر فشار هیدرواستاتیک، تنش‌های اصلی ($\sigma_1, \sigma_3$) را تغییر می‌دهد، در حالی که شعاع ($k$) ثابت می‌ماند.</p>
+                <canvas id="mohrCircleCanvas" width="500" height="300"></canvas>
+                <div class="mt-4">
+                    <label for="hydrostaticPressure" class="block mb-2 font-medium">فشار هیدرواستاتیک (p):</label>
+                    <input type="range" id="hydrostaticPressure" min="-400" max="400" value="100" class="w-full">
+                    <div class="flex justify-between text-sm mt-1">
+                        <span>فشاری</span>
+                        <span>کششی</span>
+                    </div>
+                </div>
+                <div id="mohrOutputs" class="mt-4 p-4 bg-white rounded-md border text-center font-mono"></div>
+            </div>
+        </section>
+
+        <section id="hencky" class="section-card">
+            <h2>
+                <span class="icon">📐</span>
+                معادلات هنکی
+            </h2>
+            <p class="text-lg leading-relaxed">معادلات هنکی قلب تپنده تحلیل میدان خط لغزش هستند. این معادلات رابطه بین فشار هیدرواستاتیک ($p$) و چرخش خطوط لغزش ($\phi$) را بیان می‌کنند. به طور خلاصه، این معادلات می‌گویند که با حرکت در امتداد یک خط لغزش، تغییر در فشار هیدرواستاتیک مستقیماً با تغییر در زاویه آن خط لغزش مرتبط است.</p>
+            <div class="formula">p ± 2kφ = constant</div>
+            <p>این رابطه به ما اجازه می‌دهد با دانستن شرایط در یک نقطه از میدان، وضعیت تنش را در نقاط دیگر پیش‌بینی کنیم.</p>
+
+            <div class="interactive-area">
+                <h3>قضیه اول هنکی</h3>
+                <p class="mb-4">قضیه اول هنکی بیان می‌کند که زاویه بین دو خط لغزش از یک خانواده، در جایی که توسط یک خط لغزش از خانواده دیگر قطع می‌شوند، در طول آن خط لغزش ثابت می‌ماند. این ویژگی برای ترسیم دقیق میدان‌های خط لغزش بسیار حیاتی است.</p>
+                <div class="p-4 bg-white rounded-md border text-center">
+                    <p class="font-bold text-lg">φ<sub>Q</sub> - φ<sub>P</sub> = φ<sub>B</sub> - φ<sub>A</sub></p>
+                    <p class="text-sm text-gray-600 mt-2">این رابطه نشان می‌دهد که تغییر زاویه در امتداد یک خط بتا (مثلاً از A به B) با تغییر زاویه در امتداد خط بتای دیگر (از P به Q) برابر است.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="boundaries" class="section-card">
+            <h2>
+                <span class="icon">🚦</span>
+                شرایط مرزی: رفتار فلز در لبه‌ها
+            </h2>
+            <p class="text-lg leading-relaxed">نحوه برخورد خطوط لغزش با مرزهای ماده (مانند سطح آزاد یا سطح تماس با ابزار) یکی از مهم‌ترین جنبه‌های تحلیل است. شرایط مرزی، شکل کلی میدان خط لغزش و در نتیجه فشار و نیروی لازم برای فرآیند را تعیین می‌کنند. در این بخش، شرایط مرزی مختلف را به صورت تعاملی بررسی می‌کنیم.</p>
+            
+            <div class="interactive-area">
+                 <h3>کاوشگر شرایط مرزی</h3>
+                 <p class="mb-4">با انتخاب هر حالت، ببینید خطوط لغزش چگونه با سطح تماس رفتار می‌کنند. برای حالت اصطکاک کولن، می‌توانید ضریب اصطحکاک را تغییر دهید و تأثیر آن را بر زاویه خط لغزش مشاهده کنید.</p>
+                 <div id="boundaryConditionVisual" class="w-full h-48 bg-gray-200 rounded-md flex items-center justify-center relative overflow-hidden mb-4">
+                     <div class="absolute bottom-0 left-0 w-full h-1/3 bg-gray-700" id="toolSurface">
+                        <span class="text-white absolute bottom-2 right-2 text-sm">ابزار/قالب</span>
+                     </div>
+                      <div class="absolute bottom-1/3 right-1/2 w-48 h-24 transform origin-bottom-left" id="slipLineContainer">
+                         <div class="w-full h-px bg-red-500 absolute top-1/2 left-0 transform -translate-y-1/2" id="slipLineAlpha"></div>
+                         <div class="h-full w-px bg-blue-500 absolute left-1/2 top-0 transform -translate-x-1/2" id="slipLineBeta"></div>
+                     </div>
+                     <span id="angleText" class="absolute top-4 right-4 text-lg font-bold"></span>
+                 </div>
+
+                 <div class="flex flex-wrap gap-2 justify-center mb-4">
+                    <button class="nav-link boundary-btn" data-type="frictionless" onclick="updateBoundary('frictionless')">بدون اصطکاک</button>
+                    <button class="nav-link boundary-btn" data-type="sticking" onclick="updateBoundary('sticking')">اصطکاک چسبنده</button>
+                    <button class="nav-link boundary-btn" data-type="coulomb" onclick="updateBoundary('coulomb')">اصطکاک کولن</button>
+                 </div>
+                 <div id="coulombSliderContainer" class="hidden mt-4">
+                    <label for="frictionCoeff" class="block mb-2 font-medium">ضریب اصطکاک (μ): <span id="muValue">0.1</span></label>
+                    <input type="range" id="frictionCoeff" min="0" max="0.5" step="0.01" value="0.1" class="w-full">
+                 </div>
+            </div>
+        </section>
+
+        <section id="applications" class="section-card">
+            <h2>
+                <span class="icon">🔧</span>
+                کاربردها و مسائل حل شده
+            </h2>
+            <p class="text-lg leading-relaxed">نظریه میدان خط لغزش و راه‌حل‌های کران بالا، کاربردهای عملی فراوانی در مهندسی فرآیندهای فلزکاری دارند. در این بخش، برخی از مسائل کلاسیک مانند فرورفتگی، اکستروژن و کشش نوار را به صورت تعاملی بررسی می‌کنیم و از روابطی که یاد گرفتیم برای محاسبه نیروها و فشارها استفاده می‌کنیم.</p>
+            
+            <div class="interactive-area mt-6">
+                <h3>محاسبه‌گر فشار فرورفتگی (Indentation)</h3>
+                <p class="mb-4">برای فرورفتگی یک پانچ تخت در یک بلوک بسیار ضخیم، فشار لازم به دلیل محدودیت‌های هندسی افزایش می‌یابد. این فشار با رابطه $P/2k = 1 + \pi/2 \approx 2.57$ داده می‌شود. با وارد کردن تنش تسلیم ($S=2k$)، فشار فرورفتگی را محاسبه کنید.</p>
+                <div class="flex flex-col sm:flex-row gap-4 items-center">
+                    <div class="flex-1 w-full">
+                        <label for="s_indent" class="block mb-1 font-medium">تنش تسلیم (S) (N/mm²):</label>
+                        <input type="number" id="s_indent" value="150" class="w-full p-2 border rounded-md">
+                    </div>
+                    <button onclick="calculateIndentation()" class="bg-orange-500 text-white px-6 py-2 rounded-md hover:bg-orange-600 transition-colors w-full sm:w-auto mt-4 sm:mt-0">محاسبه</button>
+                    <div id="indentationResult" class="flex-1 w-full p-4 bg-white rounded-md border text-center font-bold text-lg">---</div>
+                </div>
+            </div>
+            
+            <div class="interactive-area mt-6">
+                <h3>تأثیر هندسه بر فشار فرورفتگی</h3>
+                <p class="mb-4">فشار فرورفتگی به نسبت ضخامت نوار به عرض پانچ ($h/b$) بستگی دارد. نمودار زیر نشان می‌دهد که چگونه فشار نرمالایز شده ($P/2k$) با تغییر این نسبت تغییر می‌کند. این نمودار بر اساس داده‌های تجربی و پیش‌بینی‌های نظریه میدان خط لغزش است.</p>
+                <div class="chart-container">
+                    <canvas id="pressureRatioChart"></canvas>
+                </div>
+            </div>
+            
+             <div class="interactive-area mt-6">
+                <h3>محاسبه‌گر فشار اکستروژن</h3>
+                <p class="mb-4">برای اکستروژن، می‌توان از فرمول‌های تقریبی مبتنی بر کار همگن و کار اضافی استفاده کرد. معادله زیر یک تقریب رایج برای فشار اکستروژن ($P$) بر اساس تنش تسلیم ($Y$) و نسبت اکستروژن ($A_1/A_2$) است.</p>
+                <div class="formula">P/Y = 0.8 + 1.5 * ln(A<sub>1</sub>/A<sub>2</sub>)</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <div>
+                         <label for="y_extrude" class="block mb-1 font-medium">تنش تسلیم (Y) (N/mm²):</label>
+                        <input type="number" id="y_extrude" value="250" class="w-full p-2 border rounded-md mb-2">
+                        <label for="ratio_extrude" class="block mb-1 font-medium">نسبت اکستروژن (A₁/A₂):</label>
+                        <input type="number" id="ratio_extrude" value="14.7" class="w-full p-2 border rounded-md">
+                    </div>
+                    <div>
+                        <button onclick="calculateExtrusion()" class="bg-orange-500 text-white px-6 py-2 rounded-md hover:bg-orange-600 transition-colors w-full mb-2">محاسبه فشار</button>
+                        <div id="extrusionResult" class="p-4 bg-white rounded-md border text-center font-bold text-lg">---</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-6 mt-12 bg-gray-800 text-white">
+        <p>این اپلیکیشن تعاملی بر اساس خلاصه سوالات و پاسخ‌های کتاب درسی طراحی شده است.</p>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        
+        // --- Mohr's Circle ---
+        const mohrCanvas = document.getElementById('mohrCircleCanvas');
+        const pressureSlider = document.getElementById('hydrostaticPressure');
+        const mohrOutputs = document.getElementById('mohrOutputs');
+        const ctx = mohrCanvas.getContext('2d');
+        const k = 100; // Shear yield stress, constant radius
+        
+        function drawMohrCircle() {
+            const p = -parseFloat(pressureSlider.value); // Negative for compressive, as per convention
+            const centerX = mohrCanvas.width / 2 + p;
+            const centerY = mohrCanvas.height / 2;
+            const radius = k;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, mohrCanvas.width, mohrCanvas.height);
+
+            // Draw axes
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(mohrCanvas.width, centerY); // sigma-axis
+            ctx.moveTo(mohrCanvas.width / 2, 0);
+            ctx.lineTo(mohrCanvas.width / 2, mohrCanvas.height); // tau-axis
+            ctx.strokeStyle = '#9ca3af';
+            ctx.stroke();
+
+            // Draw Mohr's circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.1)';
+            ctx.fill();
+
+            // Draw center, sigma1, sigma3 points
+            const sigma1 = p + radius;
+            const sigma3 = p - radius;
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI); // Center
+            ctx.fillStyle = '#1f2937';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(centerX + radius, centerY, 4, 0, 2 * Math.PI); // sigma1
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(centerX - radius, centerY, 4, 0, 2 * Math.PI); // sigma3
+            ctx.fill();
+            
+            // Labels
+            ctx.font = '12px Vazirmatn';
+            ctx.fillStyle = '#1f2937';
+            ctx.textAlign = 'center';
+            ctx.fillText('σ', mohrCanvas.width - 10, centerY - 10);
+            ctx.fillText('τ', mohrCanvas.width/2 + 10, 15);
+            ctx.fillText('p = ' + (-p).toFixed(0), centerX, centerY - radius - 10);
+            ctx.fillText('σ₁', centerX + radius, centerY + 20);
+            ctx.fillText('σ₃', centerX - radius, centerY + 20);
+            
+            mohrOutputs.innerHTML = `
+                p = ${(-p).toFixed(0)} | 
+                k = ${k} | 
+                σ₁ = ${(-p + k).toFixed(0)} | 
+                σ₃ = ${(-p - k).toFixed(0)}
+            `;
+        }
+        
+        pressureSlider.addEventListener('input', drawMohrCircle);
+        drawMohrCircle();
+        
+        // --- Boundary Conditions ---
+        window.updateBoundary = function(type) {
+            const container = document.getElementById('slipLineContainer');
+            const angleText = document.getElementById('angleText');
+            const coulombSliderContainer = document.getElementById('coulombSliderContainer');
+            const frictionCoeffInput = document.getElementById('frictionCoeff');
+            const muValueSpan = document.getElementById('muValue');
+
+            // Deactivate all boundary buttons first
+            document.querySelectorAll('.boundary-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Activate the clicked button
+            const activeButton = document.querySelector(`.boundary-btn[data-type="${type}"]`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+
+            if (coulombSliderContainer) {
+                coulombSliderContainer.classList.add('hidden');
+            }
+
+            let angle = 45; // Default for frictionless
+
+            if (type === 'sticking') {
+                angle = 0;
+            } else if (type === 'coulomb') {
+                if (coulombSliderContainer) {
+                    coulombSliderContainer.classList.remove('hidden');
+                }
+                if (frictionCoeffInput && muValueSpan) {
+                    const mu = parseFloat(frictionCoeffInput.value);
+                    muValueSpan.textContent = mu.toFixed(2); // Update displayed mu value
+                    const cos2theta = Math.min(mu * 2, 1);
+                    angle = (Math.acos(cos2theta) * 180 / Math.PI) / 2;
+                }
+            }
+
+            if (container) {
+                container.style.transform = `rotate(${angle}deg)`;
+            }
+            if (angleText) {
+                angleText.textContent = `${angle.toFixed(1)}°`;
+            }
+        };
+        
+        const frictionSlider = document.getElementById('frictionCoeff');
+        const muValueSpan = document.getElementById('muValue');
+        if (frictionSlider) {
+            frictionSlider.addEventListener('input', () => {
+                if (muValueSpan) {
+                    muValueSpan.textContent = frictionSlider.value;
+                }
+                updateBoundary('coulomb');
+            });
+        }
+        updateBoundary('frictionless');
+
+
+        // --- Pressure Ratio Chart ---
+        const pressureChartCanvas = document.getElementById('pressureRatioChart');
+        const h_b_values = [0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0];
+        const P_2k_values = [1.04, 1.02, 1.01, 1.0, 1.15, 1.4, 1.7, 2.0, 2.2, 2.45, 2.57];
+        new Chart(pressureChartCanvas, {
+            type: 'line',
+            data: {
+                labels: h_b_values.map(v => v.toString()),
+                datasets: [{
+                    label: 'فشار نرمالایز شده (P/2k)',
+                    data: P_2k_values,
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'نسبت ضخامت به عرض (h/b)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'P/2k'
+                        },
+                        beginAtZero: false,
+                        suggestedMin: 1.0
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'تغییرات فشار فرورفتگی با هندسه'
+                        }
+                    }
+                }
+        });
+        
+        // --- Calculators ---
+        window.calculateIndentation = function() {
+            const s = parseFloat(document.getElementById('s_indent').value);
+            const resultDiv = document.getElementById('indentationResult');
+            if (isNaN(s) || s <= 0) {
+                resultDiv.textContent = 'مقدار نامعتبر';
+                return;
+            }
+            const two_k = s;
+            const pressure = 2.57 * two_k;
+            resultDiv.textContent = `P ≈ ${pressure.toFixed(2)} N/mm²`;
+        };
+        
+        window.calculateExtrusion = function() {
+            const y = parseFloat(document.getElementById('y_extrude').value);
+            const ratio = parseFloat(document.getElementById('ratio_extrude').value);
+            const resultDiv = document.getElementById('extrusionResult');
+            if (isNaN(y) || isNaN(ratio) || y <= 0 || ratio <= 1) {
+                 resultDiv.textContent = 'مقادیر نامعتبر';
+                return;
+            }
+            const pressure_ratio = 0.8 + 1.5 * Math.log(ratio);
+            const pressure = pressure_ratio * y;
+            resultDiv.textContent = `P ≈ ${pressure.toFixed(2)} N/mm²`;
+        };
+
+        // --- Navigaion Scroll ---
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+    });
+    </script>
+
+</body>
+</html>
